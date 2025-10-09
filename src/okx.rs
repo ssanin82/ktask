@@ -30,7 +30,7 @@ struct Data {
     #[serde(rename = "seqId")]
     seq_id: u64,
     #[serde(rename = "prevSeqId")]
-    prev_seq_id: u64
+    prev_seq_id: i64
 }
 
 pub fn run(order_book: Arc<Mutex<OrderBook>>) {
@@ -64,8 +64,6 @@ pub fn run(order_book: Arc<Mutex<OrderBook>>) {
                         if update.data.is_empty() {
                             continue;
                         }
-                        // ETHBTC tick size precision: 5)
-                        // ETHBTC lot size precision: 6)
                         for (p, q, _x, _y) in update.data[0].bids.iter() {
                             let price: u32 = dot_trim(p.clone(), 5).parse::<u32>().unwrap();
                             let qty: u64 = dot_trim(q.clone(), 6).parse::<u64>().unwrap();

@@ -28,7 +28,7 @@ Prices/sizes are converted to floats at the consumer component side for display.
   - ETH-BTC lot size as of today: 0.000001 (size precision: 6)
   - ETH-BTC tick size as of today: 0.00001 (price precision: 5)
 
-The chosen price/size precision is the maximum of the corresponding precisions on all 2 exchanges. It would have been impossible to use this technique with more exotic exchanges, like Synfutures, which do not have a fixed price tick.
+The chosen price/size precision is the maximum of the corresponding precisions on all 2 exchanges (6 for size precision and 5 for price precision). It would have been impossible to use this technique with more exotic exchanges, like Synfutures, which do not have a fixed price tick.
 
 *NOTE*: In a consolidated order book bid and ask often cross, which never happens in an order book of an individual exchange.
 

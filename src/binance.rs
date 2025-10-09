@@ -6,7 +6,8 @@ use crate::helpers::dot_trim;
 
 #[derive(Debug, Deserialize)]
 struct Snapshot {
-    lastUpdateId: u64,
+    #[serde(rename = "lastUpdateId")]
+    last_update_id: u64,
     bids: Vec<(String, String)>,
     asks: Vec<(String, String)>,
 }
@@ -34,8 +35,7 @@ fn get_snapshot(symbol: &str) -> Snapshot {
 
 pub fn run(order_book: Arc<Mutex<OrderBook>>) {
     let symbol = "ETHBTC".to_string();
-    let order_book = Arc::new(Mutex::new(OrderBook::new()));
-    let mut last_update_id: u64 = 0;
+    let mut last_update_id: u64;
 
     // WebSocket
     let ws_url = format!("wss://stream.binance.com:9443/ws/{}@depth@100ms", symbol.to_lowercase());
@@ -46,7 +46,7 @@ pub fn run(order_book: Arc<Mutex<OrderBook>>) {
     {
         let snapshot = get_snapshot(&symbol);
         let mut ob = order_book.lock().unwrap();
-        last_update_id = snapshot.lastUpdateId;
+        last_update_id = snapshot.last_update_id;
         for (p, q) in snapshot.bids {
             let price: u32 = dot_trim(p.clone(), 5).parse::<u32>().unwrap();
             let qty: u64 = dot_trim(q.clone(), 4).parse::<u64>().unwrap();
@@ -83,19 +83,19 @@ pub fn run(order_book: Arc<Mutex<OrderBook>>) {
                                 last_update_id
                             );
                         }
-                        println!("{}", &txt);
+                        // println!("{}", &txt);
                         for (p, q) in update.b {
                             let price: u32 = dot_trim(p.clone(), 5).parse::<u32>().unwrap();
-                            let qty: u64 = dot_trim(q.clone(), 4).parse::<u64>().unwrap();
+                            let qty: u64 = dot_trim(q.clone(), 6).parse::<u64>().unwrap();
                             ob.add_level(Side::Bid, price, qty);
                         }
                         for (p, q) in update.a {
                             let price: u32 = dot_trim(p.clone(), 5).parse::<u32>().unwrap();
-                            let qty: u64 = dot_trim(q.clone(), 4).parse::<u64>().unwrap();
+                            let qty: u64 = dot_trim(q.clone(), 6).parse::<u64>().unwrap();
                             ob.add_level(Side::Ask, price, qty);
                         }
                         last_update_id = update.final_update_id;
-                        ob.print();
+                        // ob.print();
                     }
                     Err(e) => {
                         println!("Failed to parse update: {}\nRaw: {}", e, txt);

@@ -33,8 +33,8 @@ fn main() {
     //     run_okx(ob2);
     // });
     for _i in 1..=5 {
-        ob.lock().unwrap().print();
         thread::sleep(Duration::from_millis(3000));
+        ob.lock().unwrap().print();
     }
     feed_bnc.join().unwrap();
     // feed_okx.join().unwrap();

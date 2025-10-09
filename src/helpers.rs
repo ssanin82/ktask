@@ -17,7 +17,13 @@ mod tests {
     use super::*;
 
     #[test]
-    fn no_padding() {
-        assert_eq!(dot_trim(String::from("0.0358"), 5), "003580");
+    fn generic() {
+        assert_eq!(dot_trim(String::from("0.0358"), 5), "003580"); // no padding
+        assert_eq!(dot_trim(String::from("12.345"), 3), "12345");
+        assert_eq!(dot_trim(String::from("12.345"), 1), "123");
+        assert_eq!(dot_trim(String::from("12.345"), 10), "123450000000");
+        // some real values
+        assert_eq!(dot_trim(String::from("19.46930000"), 6), "19469300");
+        assert_eq!(dot_trim(String::from("1.26200000"), 6), "1262000");
     }
 }
