@@ -1,49 +1,67 @@
-// use prost::Message;
-// use std::io::Write;
-// use std::net::{TcpListener, TcpStream};
-// use std::thread;
+// use tonic::{transport::Server, Response, Status};
+// use futures_core::Stream;
+// use tokio_stream::wrappers::ReceiverStream;
+// use tokio::sync::mpsc;
+// use std::pin::Pin;
 // use std::time::Duration;
 
 // pub mod pubsub {
-//     include!(concat!(env!("OUT_DIR"), "/pubsub.rs"));
+//     tonic::include_proto!("pubsub");
 // }
 
-// fn handle_client(mut stream: TcpStream) {
-//     let mut counter = 0;
-//     loop {
-//         let msg = pubsub::Message {
-//             topic: "news".to_string(),
-//             content: format!("Breaking news #{}", counter),
-//         };
+// use pubsub::publisher_server::{Publisher, PublisherServer};
+// use pubsub::{Message, SubscribeRequest};
 
-//         let mut buf = Vec::new();
-//         msg.encode(&mut buf).unwrap();
+// type ResponseStream = Pin<Box<dyn Stream<Item = Result<Message, Status>> + Send>>;
 
-//         // Prepend message length (4 bytes, big-endian)
-//         let len = (buf.len() as u32).to_be_bytes();
-//         if stream.write_all(&len).is_err() || stream.write_all(&buf).is_err() {
-//             println!("Client disconnected");
-//             break;
-//         }
+// #[derive(Default)]
+// pub struct MyPublisher {}
 
-//         println!("Sent: {}", msg.content);
-//         counter += 1;
-//         thread::sleep(Duration::from_secs(2));
-//     }
-// }
+// #[tonic::async_trait]
+// impl Publisher for MyPublisher {
+//     type SubscribeStream = ResponseStream;
 
-// fn main() -> std::io::Result<()> {
-//     let listener = TcpListener::bind("127.0.0.1:5000")?;
-//     println!("Publisher running on 127.0.0.1:5000");
+//     async fn subscribe(
+//         &self,
+//         request: tonic::Request<SubscribeRequest>,
+//     ) -> Result<Response<Self::SubscribeStream>, Status> {
+//         let topic = request.into_inner().topic;
+//         println!("Subscriber joined for topic '{}'", topic);
 
-//     for stream in listener.incoming() {
-//         match stream {
-//             Ok(stream) => {
-//                 println!("New subscriber connected");
-//                 thread::spawn(|| handle_client(stream));
+//         let (tx, rx) = mpsc::channel(10);
+
+//         // Spawn a task that periodically sends messages
+//         tokio::spawn(async move {
+//             let mut counter = 0;
+//             loop {
+//                 let msg = Message {
+//                     topic: topic.clone(),
+//                     content: format!("Breaking news #{}", counter),
+//                 };
+//                 if tx.send(Ok(msg)).await.is_err() {
+//                     println!("Client disconnected from '{}'", topic);
+//                     break;
+//                 }
+//                 counter += 1;
+//                 tokio::time::sleep(Duration::from_secs(2)).await;
 //             }
-//             Err(e) => eprintln!("Connection failed: {}", e),
-//         }
+//         });
+
+//         Ok(Response::new(Box::pin(ReceiverStream::new(rx)) as Self::SubscribeStream))
 //     }
+// }
+
+// #[tokio::main]
+// async fn main() -> Result<(), Box<dyn std::error::Error>> {
+//     let addr = "127.0.0.1:50051".parse().unwrap();
+//     let publisher = MyPublisher::default();
+
+//     println!("Publisher gRPC server listening on {}", addr);
+
+//     Server::builder()
+//         .add_service(PublisherServer::new(publisher))
+//         .serve(addr)
+//         .await?;
+
 //     Ok(())
 // }

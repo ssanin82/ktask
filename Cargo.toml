@@ -10,13 +10,15 @@ serde_json = "1.0"
 webpki = "0.22.4"
 rosc = "0.11.4"
 rustls = "0.23.32"
-# grpcio = "0.12"
 prost = "0.13"
 prost-types = "0.13"
 clap = { version = "4", features = ["derive"] }
 serde = { version = "1.0", features = ["derive"] }
 reqwest = { version = "0.12", features = ["blocking", "json"] }
-ordered-float = "3"
+tonic = "0.12"
+tokio = { version = "1.41", features = ["full"] }
+tokio-stream = "0.1"
+futures-core = "0.3"
 
 [build-dependencies]
-prost-build = "0.13"
+tonic-build = "0.12"

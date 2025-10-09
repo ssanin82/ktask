@@ -46,3 +46,5 @@ All to be done from the root folder of the project.
 ## TODO
 - WebSocket connection drop - implement reconnecting
 - Binance out of sync meassage - implement re-fetching the snapshot
+- I have hardcoded gRPC server host and port for simplicity
+- For simplicity, I haven't dockerized the pricer and subscriber, but it can be done without a problem

@@ -2,14 +2,23 @@ syntax = "proto3";
 
 package pubsub;
 
+service Publisher {
+  // Client subscribes to a topic and receives a stream of messages
+  rpc Subscribe (SubscribeRequest) returns (stream Message);
+}
+
+message SubscribeRequest {
+  string topic = 1;
+}
+
 message Level {
-  uint32 price = 1;
-  uint64 size = 2;
+  string price = 1;
+  string size = 2;
 }
 
 message Message {
   string topic = 1;
-  uint64 publish_ts_ms = 2;
-  int32 spread = 3;
-  repeated Level levels = 4;
+  string spread = 2;
+  repeated Level bids = 3;
+  repeated Level asks = 4;
 }

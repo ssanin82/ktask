@@ -1,26 +1,21 @@
 use std::collections::BTreeMap;
 
+pub const PRICE_PRECISION: usize = 5;
+pub const SIZE_PRECISION: usize = 6;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Side {
     Bid,
     Ask,
 }
 
-pub type Price = u32;
-pub type Size = u64;
-
-/// Order book that stores levels per side. Uses BTreeMap for ordered levels.
-///
-/// For bids we store with price as key and want to iterate from highest -> lowest.
-/// For asks we iterate from lowest -> highest.
 #[derive(Debug, Default)]
 pub struct OrderBook {
-    bids: BTreeMap<Price, Size>, // price -> size
-    asks: BTreeMap<Price, Size>,
+    bids: BTreeMap<i32, i32>, // price -> size
+    asks: BTreeMap<i32, i32>,
 }
 
 impl OrderBook {
-    /// Create a new empty order book
     pub fn new() -> Self {
         Self {
             bids: BTreeMap::new(),
@@ -28,10 +23,7 @@ impl OrderBook {
         }
     }
 
-    /// Add or update a level on the given side.
-    /// If `size` is zero or negative, the level is removed.
-    /// Returns the previous size at that price (if any).
-    pub fn add_level(&mut self, side: Side, price: Price, size: Size) -> Option<Size> {
+    pub fn add_level(&mut self, side: Side, price: i32, size: i32) -> Option<i32> {
         if price <= 0 {
             panic!("price must be positive");
         }
@@ -52,21 +44,21 @@ impl OrderBook {
         }
     }
 
-    pub fn best(&self, side: Side) -> Option<(Price, Size)> {
+    pub fn best(&self, side: Side) -> Option<(i32, i32)> {
         match side {
             Side::Bid => self.bids.iter().rev().next().map(|(&p, &s)| (p, s)),
             Side::Ask => self.asks.iter().next().map(|(&p, &s)| (p, s)),
         }
     }
 
-    pub fn levels(&self, side: Side) -> Vec<(Price, Size)> {
+    pub fn levels(&self, side: Side) -> Vec<(i32, i32)> {
         match side {
             Side::Bid => self.bids.iter().rev().map(|(&p, &s)| (p, s)).collect(),
             Side::Ask => self.asks.iter().map(|(&p, &s)| (p, s)).collect(),
         }
     }
 
-    pub fn size_at(&self, side: Side, price: Price) -> Option<Size> {
+    pub fn size_at(&self, side: Side, price: i32) -> Option<i32> {
         match side {
             Side::Bid => self.bids.get(&price).copied(),
             Side::Ask => self.asks.get(&price).copied(),
@@ -95,7 +87,6 @@ impl OrderBook {
     }
 }
 
-// Unit tests
 #[cfg(test)]
 mod tests {
     use super::*;

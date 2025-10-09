@@ -1,7 +1,7 @@
 use serde::Deserialize;
 use std::sync::{Arc, Mutex};
 use tungstenite::{Message};
-use crate::order_book::{OrderBook, Side};
+use crate::order_book::{OrderBook, Side, PRICE_PRECISION, SIZE_PRECISION};
 use crate::helpers::dot_trim;
 
 #[derive(Debug, Deserialize)]
@@ -48,13 +48,13 @@ pub fn run(order_book: Arc<Mutex<OrderBook>>) {
         let mut ob = order_book.lock().unwrap();
         last_update_id = snapshot.last_update_id;
         for (p, q) in snapshot.bids {
-            let price: u32 = dot_trim(p.clone(), 5).parse::<u32>().unwrap();
-            let qty: u64 = dot_trim(q.clone(), 4).parse::<u64>().unwrap();
+            let price: i32 = dot_trim(p.clone(), PRICE_PRECISION).parse::<i32>().unwrap();
+            let qty: i32 = dot_trim(q.clone(), SIZE_PRECISION).parse::<i32>().unwrap();
             ob.add_level(Side::Bid, price, qty);
         }
         for (p, q) in snapshot.asks {
-            let price: u32 = dot_trim(p.clone(), 5).parse::<u32>().unwrap();
-            let qty: u64 = dot_trim(q.clone(), 4).parse::<u64>().unwrap();
+            let price: i32 = dot_trim(p.clone(), PRICE_PRECISION).parse::<i32>().unwrap();
+            let qty: i32 = dot_trim(q.clone(), SIZE_PRECISION).parse::<i32>().unwrap();
             ob.add_level(Side::Ask, price, qty);
         }
         ob.print();
@@ -85,13 +85,13 @@ pub fn run(order_book: Arc<Mutex<OrderBook>>) {
                         }
                         // println!("{}", &txt);
                         for (p, q) in update.b {
-                            let price: u32 = dot_trim(p.clone(), 5).parse::<u32>().unwrap();
-                            let qty: u64 = dot_trim(q.clone(), 6).parse::<u64>().unwrap();
+                            let price: i32 = dot_trim(p.clone(), PRICE_PRECISION).parse::<i32>().unwrap();
+                            let qty: i32 = dot_trim(q.clone(), SIZE_PRECISION).parse::<i32>().unwrap();
                             ob.add_level(Side::Bid, price, qty);
                         }
                         for (p, q) in update.a {
-                            let price: u32 = dot_trim(p.clone(), 5).parse::<u32>().unwrap();
-                            let qty: u64 = dot_trim(q.clone(), 6).parse::<u64>().unwrap();
+                            let price: i32 = dot_trim(p.clone(), PRICE_PRECISION).parse::<i32>().unwrap();
+                            let qty: i32 = dot_trim(q.clone(), SIZE_PRECISION).parse::<i32>().unwrap();
                             ob.add_level(Side::Ask, price, qty);
                         }
                         last_update_id = update.final_update_id;
