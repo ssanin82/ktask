@@ -1,4 +1,4 @@
-use tungstenite::{client::IntoClientRequest, stream::MaybeTlsStream, WebSocket, Message};
+use tungstenite::{client::IntoClientRequest, WebSocket, Message};
 use tungstenite::client_tls;
 use url::Url;
 use std::net::TcpStream;
@@ -11,8 +11,9 @@ fn main() {
     let url = Url::parse("wss://stream.binance.com:9443/ws/ethbtc@depth20").unwrap();
     let req = url.as_str().into_client_request().unwrap();
     let domain = url.domain().unwrap();
+    let port = url.port().unwrap();
 
-    let tcp = TcpStream::connect((domain, 9443)).unwrap();
+    let tcp = TcpStream::connect((domain, port)).unwrap();
     let (mut socket, _) = client_tls(req, tcp).unwrap();
     println!("Connected to Binance depth20 feed");
     loop {

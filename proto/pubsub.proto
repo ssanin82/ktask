@@ -2,7 +2,14 @@ syntax = "proto3";
 
 package pubsub;
 
+message Level {
+  uint32 price = 1;
+  uint64 size = 2;
+}
+
 message Message {
   string topic = 1;
-  string content = 2;
+  uint64 publish_ts_ms = 2;
+  int32 spread = 3;
+  repeated Level levels = 4;
 }
