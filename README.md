@@ -1,5 +1,5 @@
 
-# Simple Price Aggregator
+# Simple Price Aggregator in Rust
 
 Aggregates spot ETHBTC prices from 2 sources:
 - Binance
