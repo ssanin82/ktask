@@ -1,11 +1,8 @@
-pub mod order_book;
-pub mod helpers;
-
 use serde::Deserialize;
 use std::sync::{Arc, Mutex};
 use tungstenite::{Message};
-use order_book::{OrderBook, Side};
-use helpers::dot_trim;
+use crate::order_book::{OrderBook, Side};
+use crate::helpers::dot_trim;
 
 #[derive(Debug, Deserialize)]
 #[allow(dead_code)]
@@ -36,8 +33,8 @@ struct Data {
     prev_seq_id: u64
 }
 
-// pub fn run(ob: &mut OrderBook) {
-pub fn main() {
+pub fn run(order_book: Arc<Mutex<OrderBook>>) {
+// pub fn main() {
     let (mut socket, _response) = tungstenite::connect("wss://ws.okx.com:8443/ws/v5/public").expect("Can't connect");
 
     let subscribe_msg = serde_json::json!({
@@ -55,8 +52,6 @@ pub fn main() {
         .expect("Failed to send subscribe message");
 
     println!("Subscribed to ETH-BTC order book");
-
-    let order_book = Arc::new(Mutex::new(OrderBook::new()));
 
     loop {
         let msg = socket.read().expect("Error reading message");

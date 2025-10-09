@@ -75,18 +75,20 @@ impl OrderBook {
 
     pub fn print(&self) {
         println!("ASKS:");
-        for (p, q) in self.asks.iter().rev() {
+        for (p, q) in self.asks.iter().take(10).rev() {
             println!("{} -> {}", p, q);
         }
         println!("");
         println!("BIDS:");
-        for (p, q) in self.bids.iter().rev() {
+        for (p, q) in self.bids.iter().rev().take(10) {
             println!("{} -> {}", p, q);
         }
         println!("");
         if self.bids.len() > 0 && self.asks.len() > 0 {
-            println!("SPREAD: {}",
-                self.best(Side::Ask).unwrap().0 - self.best(Side::Bid).unwrap().0
+            println!(
+                "SPREAD: {}",
+                self.best(Side::Ask).unwrap().0 as i32
+                - self.best(Side::Bid).unwrap().0 as i32
             );
         }
         println!("")
