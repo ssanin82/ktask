@@ -72,6 +72,25 @@ impl OrderBook {
             Side::Ask => self.asks.get(&price).copied(),
         }
     }
+
+    pub fn print(&self) {
+        println!("ASKS:");
+        for (p, q) in self.asks.iter().rev() {
+            println!("{} -> {}", p, q);
+        }
+        println!("");
+        println!("BIDS:");
+        for (p, q) in self.bids.iter().rev() {
+            println!("{} -> {}", p, q);
+        }
+        println!("");
+        if self.bids.len() > 0 && self.asks.len() > 0 {
+            println!("SPREAD: {}",
+                self.best(Side::Ask).unwrap().0 - self.best(Side::Bid).unwrap().0
+            );
+        }
+        println!("")
+    }
 }
 
 // Unit tests

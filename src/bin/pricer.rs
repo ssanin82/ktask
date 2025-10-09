@@ -9,6 +9,7 @@ use std::thread;
 use std::time::Duration;
 use std::fmt;
 use serde::Deserialize;
+use helpers::dot_trim;
 
 const BINANCE_URL: &str = "wss://stream.binance.com:9443/ws/ethbtc@depth20";
 const OKX_URL: &str = "wss://ws.okx.com:8443/ws/v5/public";
@@ -66,15 +67,6 @@ impl fmt::Display for Xch {
             Xch::Okx => write!(f, "OKX"),
         }
     }
-}
-
-fn dot_trim(mut s: String, n: usize) -> String {
-    if let Some(dot_pos) = s.find('.') {
-        s.remove(dot_pos);
-        let keep_len = (dot_pos + n).min(s.len());
-        s.truncate(keep_len);
-    }
-    s
 }
 
 impl Xch {
