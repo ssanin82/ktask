@@ -5,11 +5,6 @@ Aggregates spot ETHBTC prices from 2 sources:
 - Binance
 - OKX
 
-## Assumptions and Reasoning
-These sources are chosen due to the simplicity of the protocol and good liquidity. Calculating the entry price for a $ 50 million notional amount, as given in the formulation, is rarely feasible, even considering that these are one of the most liquid exchanges (Binance beats everything else by a margin). To make this choice, I used:
-- rankings from https://coinmarketcap.com/rankings/exchanges/
-- my own experience working with these exchanges
-
 ### Price/Volume Calculations
 In my implementation, I decided to avoid working with floating point arithmetic due to a very bad experience I encountered when the protocol is designed to have price/size as floats. Potential problems: rounding error may accumualte while storing/manipulating float/double numbers; however, those floating-point numbers need to be converted to a fixed-precision floating-point string when communicating with the exchange. Such conversions may sometime throw price/size by a tick or so at unexpected moment, sometimes having a significant impact on P&L. Strategies where a single price tick off means a loss of money are specifically impacted (e.g., when your orders should aim to remain below the best price by 1 tick at most, without crossing, being repositioned each time price moves over a threshold).
 
@@ -32,19 +27,12 @@ The chosen price/size precision is the maximum of the corresponding precisions o
 
 *NOTE*: In a consolidated order book bid and ask often cross, which never happens in an order book of an individual exchange.
 
-## Building/Starting/Stopping
-All to be done from the root folder of the project.
-- Build: `docker-compose build`
-- Start: `docker-compose up -d`
-- Stopping: `docker-compose down`
-- Tracing best bid/offer prices: `docker-compose logs -f get_bba`
-- Tracing notional volume bands: `docker-compose logs -f get_vbd`
-- Tracing mid price with "deviations": `docker-compose logs -f get_pbd`
-- NOTE I did try uploading the image to DockerHub to save time on verifying the task, but considering the size of that image (several gigabytes), pulling it from DockerHub is not much faster, if at all, compared to building it from Dockerfile
+## Running Publisher/Subscriber
+- Starting the publisher: `cargo run --bin pricer`
+- Starting the subscriber: `cargo run --bin consumer`
 
-
-## TODO
-- WebSocket connection drop - implement reconnecting
-- Binance out of sync meassage - implement re-fetching the snapshot
-- I have hardcoded gRPC server host and port for simplicity
-- For simplicity, I haven't dockerized the pricer and subscriber, but it can be done without a problem
+## Difference with real production code
+- WebSocket connection drops are not handled. Exchanges do drop connections periodically, in production the market data component should reconnect once connection is lost.
+- Binance out of sync meassage - rare, but if it happens (message stream skips over some sequence numbers, the component should reconnect and rebuild the order book)
+- I have hardcoded gRPC server host and port for simplicity, symbols are also hardcoded for each exchange, price/size precisions are hardcoded
+- For simplicity, I haven't dockerized the pricer and subscriber. Can be done if necessary, but in case of test assignment since Rust has an efficient package management, it may be excessive.

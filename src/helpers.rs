@@ -30,7 +30,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn teat_dot_trim() {
+    fn test_dot_trim() {
         assert_eq!(dot_trim(String::from("0.0358"), 5), "003580"); // no padding
         assert_eq!(dot_trim(String::from("12.345"), 3), "12345");
         assert_eq!(dot_trim(String::from("12.345"), 1), "123");
@@ -41,7 +41,7 @@ mod tests {
     }
 
     #[test]
-    fn teat_itos() {
+    fn test_itos() {
         assert_eq!(itos(358, 2), "3.58");
         assert_eq!(itos(358, 3), "0.358");
         assert_eq!(itos(358, 5), "0.00358");
