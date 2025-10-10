@@ -28,6 +28,7 @@ pub struct OrderBook {
     bids: BTreeMap<i32, PriceLevel>,
     // asks: sorted ascending by price
     asks: BTreeMap<i32, PriceLevel>,
+    upd_count: HashMap<String, i32>,
 }
 
 #[derive(Debug, Clone)]
@@ -39,7 +40,11 @@ pub struct PriceLevelSnapshot {
 
 impl OrderBook {
     pub fn new() -> Self {
-        Self { bids: BTreeMap::new(), asks: BTreeMap::new() }
+        Self {
+            bids: BTreeMap::new(),
+            asks: BTreeMap::new(),
+            upd_count: HashMap::new(),
+        }
     }
 
     pub fn apply_update(&mut self, source: &str, side: Side, price: i32, size: i32) {
@@ -61,6 +66,8 @@ impl OrderBook {
             let level = book_map.entry(price).or_insert_with(PriceLevel::new);
             level.by_source.insert(source.to_string(), size);
             level.total = level.by_source.values().copied().sum();
+            let count = self.upd_count.entry(source.to_string()).or_insert(0);
+            *count += 1;
         }
     }
 
@@ -115,6 +122,45 @@ impl OrderBook {
         println!("");
         println!("SPREAD: {}", self.get_spread().unwrap().2);
         println!("");
+    }
+
+    pub fn print_detailed(&self) {
+        let now = Utc::now();
+        println!("Current timestamp: {}", now);
+
+        println!("ASKS:");
+        println!("{:<10} {:<10} {:<10} {:<10}", "Price", "Binance", "OKX", "Total");
+        for pls in self.top_n(Side::Ask, 10).iter().rev() {
+            let binance_size = pls.by_source.get("Binance").copied().unwrap_or(0);
+            let okx_size = pls.by_source.get("Okx").copied().unwrap_or(0);
+            println!(
+                "{:<10} {:<10} {:<10} {:<10}",
+                pls.price, binance_size, okx_size, pls.total
+            );
+        }
+
+        println!("\nBIDS:");
+        println!("{:<10} {:<10} {:<10} {:<10}", "Price", "Binance", "OKX", "Total");
+        for pls in self.top_n(Side::Bid, 10).iter() {
+            let binance_size = pls.by_source.get("Binance").copied().unwrap_or(0);
+            let okx_size = pls.by_source.get("Okx").copied().unwrap_or(0);
+            println!(
+                "{:<10} {:<10} {:<10} {:<10}",
+                pls.price, binance_size, okx_size, pls.total
+            );
+        }
+
+        if let Some((_bid, _ask, spread)) = self.get_spread() {
+            println!("\nSPREAD: {}", spread);
+        } else {
+            println!("\nSPREAD: N/A");
+        }
+
+        println!(
+            "UPDATE COUNT: Binance={}, OKX={}\n\n",
+            self.upd_count.get(&String::from("BINANCE")).unwrap_or(&0),
+            self.upd_count.get(&String::from("OKX")).unwrap_or(&0)
+        );
     }
 }
 

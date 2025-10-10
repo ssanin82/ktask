@@ -82,8 +82,9 @@ pub async fn run(order_book: Arc<Mutex<OrderBook>>) -> Result<()> {
                         }
                         // ob.print();
                     }
-                    Err(e) => {
-                        println!("OKX: Failed to parse update: {}\nRaw: {}", e, txt);
+                    Err(_e) => {
+                        // XXX just ignore for now, it is mainly subs ack
+                        // println!("OKX: Failed to parse update: {}\nRaw: {}", e, txt);
                     }
                 }
             }

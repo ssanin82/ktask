@@ -78,7 +78,7 @@ impl Publisher for MyPublisher {
                 }
                 tokio::time::sleep(Duration::from_secs(PUB_IVAL_SEC)).await;
                 //
-                ob.print();
+                ob.print_detailed();
             }
         });
 

@@ -16,7 +16,7 @@ pub async fn run(order_book: Arc<Mutex<OrderBook>>) -> Result<()> {
     // WebSocket
     let ws_url = "wss://stream.binance.com:9443/ws/ethbtc@depth@100ms";
     let (ws_stream, _) = connect_async(ws_url).await?;
-    println!("WebSocket connected");
+    println!("BINANCE: WebSocket connected");
     let (mut write, mut read) = ws_stream.split();
 
     // Buffer updates before snapshot arrives
@@ -30,8 +30,7 @@ pub async fn run(order_book: Arc<Mutex<OrderBook>>) -> Result<()> {
         let snapshot_url = "https://api.binance.com/api/v3/depth?symbol=ETHBTC&limit=1000";
         let resp = reqwest::get(snapshot_url).await.unwrap().json::<Value>().await.unwrap();
         last_update_id = resp["lastUpdateId"].as_i64().unwrap();
-        println!("Snapshot loaded. lastUpdateId = {}", last_update_id);
-        // println!("{}", resp);
+        println!("BINANCE: Snapshot loaded. lastUpdateId = {}", last_update_id);
 
         let mut b = ob.lock().await;
         if let Some(bids) = resp["bids"].as_array() {
