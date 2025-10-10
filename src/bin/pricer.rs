@@ -4,7 +4,7 @@ use tokio::sync::mpsc;
 use futures_core::Stream;
 use std::pin::Pin;
 use std::time::Duration;
-// use ktask::okx::run as run_okx;
+use ktask::okx::run as run_okx;
 use ktask::binance::run as run_bnc;
 use ktask::order_book::OrderBook;
 use std::sync::Arc;
@@ -92,8 +92,8 @@ async fn main() -> Result<()> {
 
     let ob1 = Arc::clone(&ob);
     tokio::spawn(async move { run_bnc(ob1).await });
-    // let ob2 = Arc::clone(&ob);
-    // tokio::spawn(async move { run_okx(ob2).await });
+    let ob2 = Arc::clone(&ob);
+    tokio::spawn(async move { run_okx(ob2).await });
 
     let addr = "127.0.0.1:50051".parse().unwrap();
     let ob_pub = Arc::clone(&ob);

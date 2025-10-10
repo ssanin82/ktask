@@ -4,16 +4,20 @@ use crate::order_book::{OrderBook, Side, PRICE_PRECISION, SIZE_PRECISION};
 use crate::helpers::dot_trim;
 use tokio_tungstenite::connect_async;
 use serde_json::Value;
-use futures_util::StreamExt;
 use anyhow::Result;
 use std::sync::atomic::{AtomicBool, Ordering};
+use tokio_tungstenite::tungstenite::protocol::Message;
+use futures_util::{SinkExt, StreamExt};
 
+// TODO ping/pomg
+
+#[allow(unused_assignments)]
 pub async fn run(order_book: Arc<Mutex<OrderBook>>) -> Result<()> {
     // WebSocket
     let ws_url = "wss://stream.binance.com:9443/ws/ethbtc@depth@100ms";
     let (ws_stream, _) = connect_async(ws_url).await?;
     println!("WebSocket connected");
-    let (_, mut read) = ws_stream.split();
+    let (mut write, mut read) = ws_stream.split();
 
     // Buffer updates before snapshot arrives
     let mut update_buffer: Vec<String> = Vec::new();
@@ -77,17 +81,29 @@ pub async fn run(order_book: Arc<Mutex<OrderBook>>) -> Result<()> {
     let _ob = Arc::clone(&order_book);
     while let Some(msg) = read.next().await {
         let msg = msg?;
-        if msg.is_text() {
-            let data: Value = serde_json::from_str(&msg.into_text()?)?;
-            if let Some(u) = data["u"].as_i64() {
-                if u <= last_update_id {
-                    continue;
+        match msg {
+            Message::Text(txt) => {
+                let data: Value = serde_json::from_str(&txt)?;
+                if let Some(u) = data["u"].as_i64() {
+                    if u <= last_update_id {
+                        continue;
+                    }
+                    apply_binance_update(&_ob, &data).await;
+                    //
+                    // let mut __ob = _ob.lock().await;
+                    // __ob.print();
                 }
-                apply_binance_update(&_ob, &data).await;
             }
+            Message::Ping(payload) => {
+                println!("BINANCE: Received Ping frame");
+                write.send(Message::Pong(payload)).await?;
+            }
+            Message::Pong(_) => {
+                println!("BINANCE: Received Pong frame");
+            }
+            _ => {}
         }
     }
-
     Ok::<_, anyhow::Error>(())
 }
 
