@@ -12,21 +12,13 @@ For storing the order book, no floating point numbers are used. Only integers - 
 Prices/sizes are converted to float strings at the consumer component side for display. Price precision chosen is 5, size precision chosen is 6. This is derived from current tick sizes and lot sizes in selected exchanges for BTCUSDT:
 
 - Binance Reference Data
-
   - URL: https://api.binance.com/api/v3/exchangeInfo
-
   - ETHBTC lot size as of today:   0.0001  (size precision: 4)
-
   - ETHBTC tick size as of today: 0.00001  (price precision: 5)
-
 - OKX Reference Data
-
   - URL: https://www.okx.com/api/v5/public/instruments?instType=SPOT
-
   - ETH-BTC lot size as of today: 0.000001 (size precision: 6)
-
   - ETH-BTC tick size as of today: 0.00001 (price precision: 5)
-
 
 The chosen price/size precision is the maximum of the corresponding precisions on all 2 exchanges. It would have been impossible to use this technique with more exotic exchanges, like Synfutures, which do not have a fixed price tick.
 
