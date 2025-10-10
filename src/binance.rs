@@ -82,6 +82,7 @@ pub async fn run(order_book: Arc<Mutex<OrderBook>>) -> Result<()> {
         let msg = msg?;
         match msg {
             Message::Text(txt) => {
+                // println!("BINANCE {}", txt);
                 let data: Value = serde_json::from_str(&txt)?;
                 if let Some(u) = data["u"].as_i64() {
                     if u <= last_update_id {

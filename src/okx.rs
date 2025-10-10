@@ -63,6 +63,7 @@ pub async fn run(order_book: Arc<Mutex<OrderBook>>) -> Result<()> {
     while let Some(Ok(msg)) = read.next().await {
         match msg {
             Message::Text(txt) => {
+                // println!("OKX {}", txt);
                 let update: serde_json::Result<DepthUpdate> = serde_json::from_str(&txt);
                 match update {
                     Ok(update) => {

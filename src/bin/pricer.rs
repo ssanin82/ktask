@@ -56,7 +56,6 @@ impl Publisher for MyPublisher {
         let (tx, rx) = mpsc::channel(10);
         let ob_clone = Arc::clone(&self.order_book);
         tokio::spawn(async move {
-            let ob = ob_clone.lock().await;
             loop {
                 // sending the message -----------
                 let msg = Message {
@@ -78,6 +77,7 @@ impl Publisher for MyPublisher {
                 }
                 tokio::time::sleep(Duration::from_secs(PUB_IVAL_SEC)).await;
                 //
+                let ob = ob_clone.lock().await;
                 ob.print_detailed();
             }
         });
@@ -96,9 +96,7 @@ async fn main() -> Result<()> {
     tokio::spawn(async move { run_okx(ob2).await });
 
     let addr = "127.0.0.1:50051".parse().unwrap();
-    let ob_pub = Arc::clone(&ob);
-    let publisher = MyPublisher::new(ob_pub);
-
+    let publisher = MyPublisher::new(Arc::clone(&ob));
     println!("Publisher gRPC server listening on {}", addr);
     Server::builder()
         .add_service(PublisherServer::new(publisher))

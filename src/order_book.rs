@@ -68,6 +68,12 @@ impl OrderBook {
             level.total = level.by_source.values().copied().sum();
             let count = self.upd_count.entry(source.to_string()).or_insert(0);
             *count += 1;
+
+            // println!(
+            //     "UPDATE COUNT: Binance={}, OKX={}\n\n",
+            //     self.upd_count.get(&String::from("BINANCE")).unwrap_or(&0),
+            //     self.upd_count.get(&String::from("OKX")).unwrap_or(&0)
+            // );
         }
     }
 
@@ -131,8 +137,8 @@ impl OrderBook {
         println!("ASKS:");
         println!("{:<10} {:<10} {:<10} {:<10}", "Price", "Binance", "OKX", "Total");
         for pls in self.top_n(Side::Ask, 10).iter().rev() {
-            let binance_size = pls.by_source.get("Binance").copied().unwrap_or(0);
-            let okx_size = pls.by_source.get("Okx").copied().unwrap_or(0);
+            let binance_size = pls.by_source.get("BINANCE").copied().unwrap_or(0);
+            let okx_size = pls.by_source.get("OKX").copied().unwrap_or(0);
             println!(
                 "{:<10} {:<10} {:<10} {:<10}",
                 pls.price, binance_size, okx_size, pls.total
@@ -142,8 +148,8 @@ impl OrderBook {
         println!("\nBIDS:");
         println!("{:<10} {:<10} {:<10} {:<10}", "Price", "Binance", "OKX", "Total");
         for pls in self.top_n(Side::Bid, 10).iter() {
-            let binance_size = pls.by_source.get("Binance").copied().unwrap_or(0);
-            let okx_size = pls.by_source.get("Okx").copied().unwrap_or(0);
+            let binance_size = pls.by_source.get("BINANCE").copied().unwrap_or(0);
+            let okx_size = pls.by_source.get("OKX").copied().unwrap_or(0);
             println!(
                 "{:<10} {:<10} {:<10} {:<10}",
                 pls.price, binance_size, okx_size, pls.total
