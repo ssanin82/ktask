@@ -1,121 +1,110 @@
-use serde::Deserialize;
-use std::sync::{Arc, Mutex};
-use tungstenite::{Message};
+use std::sync::Arc;
+use tokio::sync::Mutex;
 use crate::order_book::{OrderBook, Side, PRICE_PRECISION, SIZE_PRECISION};
 use crate::helpers::dot_trim;
+use tokio_tungstenite::connect_async;
+use serde_json::Value;
+use futures_util::StreamExt;
+use anyhow::Result;
+use std::sync::atomic::{AtomicBool, Ordering};
 
-#[derive(Debug, Deserialize)]
-struct Snapshot {
-    #[serde(rename = "lastUpdateId")]
-    last_update_id: u64,
-    bids: Vec<(String, String)>,
-    asks: Vec<(String, String)>,
-}
-
-#[derive(Debug, Deserialize)]
-struct DepthUpdate {
-    #[serde(rename = "U")]
-    first_update_id: u64,
-    #[serde(rename = "u")]
-    final_update_id: u64,
-    b: Vec<(String, String)>, // bids
-    a: Vec<(String, String)>, // asks
-}
-
-fn get_snapshot(symbol: &str) -> Snapshot {
-    let url = format!(
-        "https://api.binance.com/api/v3/depth?symbol={}&limit=1000",
-        symbol
-    );
-    let resp = reqwest::blocking::get(&url).expect("Failed to fetch snapshot");
-    let text = resp.text().expect("Failed to read response text");
-    // println!("Snapshot response:\n{}", text); // <-- debug print
-    serde_json::from_str(&text).expect("Failed to parse snapshot")
-}
-
-pub fn run(order_book: Arc<Mutex<OrderBook>>) {
-    let symbol = "ETHBTC".to_string();
-    let mut last_update_id: u64;
-
+pub async fn run(order_book: Arc<Mutex<OrderBook>>) -> Result<()> {
     // WebSocket
-    let ws_url = format!("wss://stream.binance.com:9443/ws/{}@depth@100ms", symbol.to_lowercase());
-    let (mut socket, _response) = tungstenite::connect(ws_url).expect("Can't connect");
+    let ws_url = "wss://stream.binance.com:9443/ws/ethbtc@depth@100ms";
+    let (ws_stream, _) = connect_async(ws_url).await?;
     println!("WebSocket connected");
+    let (_, mut read) = ws_stream.split();
 
-    // Get initial snapshot
-    {
-        let snapshot = get_snapshot(&symbol);
-        let mut ob = order_book.lock().unwrap();
-        last_update_id = snapshot.last_update_id;
-        for (p, q) in snapshot.bids {
-            let price: i32 = dot_trim(p.clone(), PRICE_PRECISION).parse::<i32>().unwrap();
-            let qty: i32 = dot_trim(q.clone(), SIZE_PRECISION).parse::<i32>().unwrap();
-            ob.apply_update("BINANCE", Side::Bid, price, qty);
+    // Buffer updates before snapshot arrives
+    let mut update_buffer: Vec<String> = Vec::new();
+    let snapshot_received = Arc::new(AtomicBool::new(false));
+    let flag = snapshot_received.clone();
+    let mut last_update_id: i64 = 0;
+    // Spawn a background task to fetch snapshot while buffering
+    let ob = Arc::clone(&order_book);
+    let snapshot_task = tokio::spawn(async move {
+        let snapshot_url = "https://api.binance.com/api/v3/depth?symbol=ETHBTC&limit=1000";
+        let resp = reqwest::get(snapshot_url).await.unwrap().json::<Value>().await.unwrap();
+        last_update_id = resp["lastUpdateId"].as_i64().unwrap();
+        println!("Snapshot loaded. lastUpdateId = {}", last_update_id);
+        // println!("{}", resp);
+
+        let mut b = ob.lock().await;
+        if let Some(bids) = resp["bids"].as_array() {
+            for bid in bids {
+                let price: i32 = dot_trim(bid[0].to_string().replace('"', ""), PRICE_PRECISION).parse::<i32>().unwrap();
+                let qty: i32 = dot_trim(bid[1].to_string().replace('"', ""), SIZE_PRECISION).parse::<i32>().unwrap();
+                b.apply_update("BINANCE", Side::Bid, price, qty);
+            }
         }
-        for (p, q) in snapshot.asks {
-            let price: i32 = dot_trim(p.clone(), PRICE_PRECISION).parse::<i32>().unwrap();
-            let qty: i32 = dot_trim(q.clone(), SIZE_PRECISION).parse::<i32>().unwrap();
-            ob.apply_update("BINANCE", Side::Ask, price, qty);
+        if let Some(asks) = resp["asks"].as_array() {
+            for ask in asks {
+                let price: i32 = dot_trim(ask[0].to_string().replace('"', ""), PRICE_PRECISION).parse::<i32>().unwrap();
+                let qty: i32 = dot_trim(ask[1].to_string().replace('"', ""), SIZE_PRECISION).parse::<i32>().unwrap();
+                b.apply_update("BINANCE", Side::Ask, price, qty);
+            }
         }
-        ob.print();
+
+        flag.store(true, Ordering::SeqCst);
+        last_update_id
+    });
+
+    // Step 2 — Buffer WebSocket updates until snapshot is ready
+    while !snapshot_received.load(Ordering::SeqCst) {
+        if let Some(msg) = read.next().await {
+            let msg = msg?;
+            if msg.is_text() {
+                update_buffer.push(msg.into_text()?.to_string());
+            }
+        }
     }
 
-    loop {
-        let msg = socket.read().expect("Error reading message");
-        match msg {
-            Message::Text(txt) => {
-                let update: serde_json::Result<DepthUpdate> = serde_json::from_str(&txt);
-                match update {
-                    Ok(update) => {
-                        let mut ob = order_book.lock().unwrap();
-                        if update.final_update_id <= last_update_id {
-                            println!(
-                                "Outdated seq id: {} < {}",
-                                update.final_update_id,
-                                last_update_id
-                            );
-                            continue;
-                        }
-                        if update.first_update_id > last_update_id + 1 {
-                            panic!(
-                                "Out of sync: fetching snapshot again... ({} - {})",
-                                update.first_update_id,
-                                last_update_id
-                            );
-                        }
-                        // println!("{}", &txt);
-                        for (p, q) in update.b {
-                            let price: i32 = dot_trim(p.clone(), PRICE_PRECISION).parse::<i32>().unwrap();
-                            let qty: i32 = dot_trim(q.clone(), SIZE_PRECISION).parse::<i32>().unwrap();
-                            ob.apply_update("BINANCE", Side::Bid, price, qty);
-                        }
-                        for (p, q) in update.a {
-                            let price: i32 = dot_trim(p.clone(), PRICE_PRECISION).parse::<i32>().unwrap();
-                            let qty: i32 = dot_trim(q.clone(), SIZE_PRECISION).parse::<i32>().unwrap();
-                            ob.apply_update("BINANCE", Side::Ask, price, qty);
-                        }
-                        last_update_id = update.final_update_id;
-                        // ob.print();
-                    }
-                    Err(e) => {
-                        println!("Failed to parse update: {}\nRaw: {}", e, txt);
-                    }
+    let last_update_id = snapshot_task.await.unwrap();
+
+    // Step 3 — Process buffered updates
+    for msg_text in update_buffer {
+        let data: Value = serde_json::from_str(&msg_text)?;
+        let _ob = Arc::clone(&order_book);
+        if let Some(u) = data["u"].as_i64() {
+            if u <= last_update_id {
+                continue;
+            }
+            apply_binance_update(&_ob, &data).await;
+        }
+    }
+
+    // Step 4 — Continue processing real-time updates
+    let _ob = Arc::clone(&order_book);
+    while let Some(msg) = read.next().await {
+        let msg = msg?;
+        if msg.is_text() {
+            let data: Value = serde_json::from_str(&msg.into_text()?)?;
+            if let Some(u) = data["u"].as_i64() {
+                if u <= last_update_id {
+                    continue;
                 }
+                apply_binance_update(&_ob, &data).await;
             }
-            Message::Ping(p) => {
-                println!("Received ping, sending pong");
-                socket
-                    .send(Message::Pong(p))
-                    .expect("Failed to send pong");
-            }
-            Message::Pong(_) => {
-                println!("Received pong");
-            }
-            Message::Close(frame) => {
-                println!("WebSocket closed: {:?}", frame);
-                break;
-            }
-            _ => {}
+        }
+    }
+
+    Ok::<_, anyhow::Error>(())
+}
+
+async fn apply_binance_update(book: &Arc<Mutex<OrderBook>>, data: &Value) {
+    let mut b = book.lock().await;
+    if let Some(bids) = data["b"].as_array() {
+        for bid in bids {
+            let price: i32 = dot_trim(bid[0].to_string().replace('"', ""), PRICE_PRECISION).parse::<i32>().unwrap();
+            let qty: i32 = dot_trim(bid[1].to_string().replace('"', ""), SIZE_PRECISION).parse::<i32>().unwrap();
+            b.apply_update("BINANCE", Side::Bid, price, qty);
+        }
+    }
+    if let Some(asks) = data["a"].as_array() {
+        for ask in asks {
+            let price: i32 = dot_trim(ask[0].to_string().replace('"', ""), PRICE_PRECISION).parse::<i32>().unwrap();
+            let qty: i32 = dot_trim(ask[1].to_string().replace('"', ""), SIZE_PRECISION).parse::<i32>().unwrap();
+            b.apply_update("BINANCE", Side::Ask, price, qty);
         }
     }
 }

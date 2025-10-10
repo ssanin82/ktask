@@ -3,12 +3,13 @@ use tokio_stream::wrappers::ReceiverStream;
 use tokio::sync::mpsc;
 use futures_core::Stream;
 use std::pin::Pin;
-use std::thread;
 use std::time::Duration;
 // use ktask::okx::run as run_okx;
 use ktask::binance::run as run_bnc;
 use ktask::order_book::OrderBook;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
+use tokio::sync::Mutex;
+use anyhow::Result;
 
 const PUB_IVAL_SEC: u64 = 1;
 
@@ -53,9 +54,9 @@ impl Publisher for MyPublisher {
         }
 
         let (tx, rx) = mpsc::channel(10);
-        let order_book = self.order_book.clone();
+        let ob_clone = Arc::clone(&self.order_book);
         tokio::spawn(async move {
-            let ob = order_book.lock().await;
+            let ob = ob_clone.lock().await;
             loop {
                 // sending the message -----------
                 let msg = Message {
@@ -86,17 +87,13 @@ impl Publisher for MyPublisher {
 }
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() -> Result<()> {
     let ob = Arc::new(Mutex::new(OrderBook::new()));
 
     let ob1 = Arc::clone(&ob);
-    let feed_bnc = thread::spawn(move || {
-        run_bnc(ob1);
-    });
+    tokio::spawn(async move { run_bnc(ob1).await });
     // let ob2 = Arc::clone(&ob);
-    // let feed_okx = thread::spawn(move || {
-    //     run_okx(ob2);
-    // });
+    // tokio::spawn(async move { run_okx(ob2).await });
 
     let addr = "127.0.0.1:50051".parse().unwrap();
     let ob_pub = Arc::clone(&ob);
@@ -107,10 +104,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .add_service(PublisherServer::new(publisher))
         .serve(addr)
         .await?;
-
-    feed_bnc.join().unwrap();
-    // feed_okx.join().unwrap();
-    println!("Done!");
 
     Ok(())
 }

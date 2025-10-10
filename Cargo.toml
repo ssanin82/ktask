@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 tungstenite = { version = "0.23", default-features = false, features = ["rustls-tls-native-roots", "handshake"] }
+tokio-tungstenite = { version = "0.28.0", features = ["rustls-tls-native-roots"] }
 url = "2.4"
 serde_json = "1.0"
 webpki = "0.22.4"
@@ -20,6 +21,8 @@ tokio = { version = "1.41", features = ["full"] }
 tokio-stream = "0.1"
 futures-core = "0.3"
 chrono = "0.4"
+futures-util = "0.3"
+anyhow = "1.0"
 
 [build-dependencies]
 tonic-build = "0.12"
