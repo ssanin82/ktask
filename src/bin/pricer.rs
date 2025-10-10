@@ -5,7 +5,7 @@ use futures_core::Stream;
 use std::pin::Pin;
 use std::thread;
 use std::time::Duration;
-use ktask::okx::run as run_okx;
+// use ktask::okx::run as run_okx;
 use ktask::binance::run as run_bnc;
 use ktask::order_book::OrderBook;
 use std::sync::{Arc, Mutex};
@@ -21,8 +21,17 @@ use pubsub::{Message, SubscribeRequest, Level};
 
 type ResponseStream = Pin<Box<dyn Stream<Item = Result<Message, Status>> + Send>>;
 
-#[derive(Default)]
-pub struct MyPublisher {}
+pub struct MyPublisher {
+    order_book: Arc<Mutex<OrderBook>>,
+}
+
+impl MyPublisher {
+    fn new(ob: Arc<Mutex<OrderBook>>) -> Self {
+        MyPublisher {
+            order_book: ob,
+        }
+    }
+}
 
 #[tonic::async_trait]
 impl Publisher for MyPublisher {
@@ -44,8 +53,9 @@ impl Publisher for MyPublisher {
         }
 
         let (tx, rx) = mpsc::channel(10);
-        // Spawn a task that periodically sends messages
+        let order_book = self.order_book.clone();
         tokio::spawn(async move {
+            let ob = order_book.lock().await;
             loop {
                 // sending the message -----------
                 let msg = Message {
@@ -66,6 +76,8 @@ impl Publisher for MyPublisher {
                     break;
                 }
                 tokio::time::sleep(Duration::from_secs(PUB_IVAL_SEC)).await;
+                //
+                ob.print();
             }
         });
 
@@ -81,17 +93,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let feed_bnc = thread::spawn(move || {
         run_bnc(ob1);
     });
-    let ob2 = Arc::clone(&ob);
-    let feed_okx = thread::spawn(move || {
-        run_okx(ob2);
-    });
-    // for _i in 1..=5 {
-    //     thread::sleep(Duration::from_millis(3000));
-    //     ob.lock().unwrap().print();
-    // }
+    // let ob2 = Arc::clone(&ob);
+    // let feed_okx = thread::spawn(move || {
+    //     run_okx(ob2);
+    // });
 
     let addr = "127.0.0.1:50051".parse().unwrap();
-    let publisher = MyPublisher::default();
+    let ob_pub = Arc::clone(&ob);
+    let publisher = MyPublisher::new(ob_pub);
 
     println!("Publisher gRPC server listening on {}", addr);
     Server::builder()
@@ -100,7 +109,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .await?;
 
     feed_bnc.join().unwrap();
-    feed_okx.join().unwrap();
+    // feed_okx.join().unwrap();
     println!("Done!");
 
     Ok(())

@@ -29,7 +29,7 @@ fn get_snapshot(symbol: &str) -> Snapshot {
     );
     let resp = reqwest::blocking::get(&url).expect("Failed to fetch snapshot");
     let text = resp.text().expect("Failed to read response text");
-    println!("Snapshot response:\n{}", text); // <-- debug print
+    // println!("Snapshot response:\n{}", text); // <-- debug print
     serde_json::from_str(&text).expect("Failed to parse snapshot")
 }
 
@@ -50,12 +50,12 @@ pub fn run(order_book: Arc<Mutex<OrderBook>>) {
         for (p, q) in snapshot.bids {
             let price: i32 = dot_trim(p.clone(), PRICE_PRECISION).parse::<i32>().unwrap();
             let qty: i32 = dot_trim(q.clone(), SIZE_PRECISION).parse::<i32>().unwrap();
-            ob.add_level(Side::Bid, price, qty);
+            ob.apply_update("BINANCE", Side::Bid, price, qty);
         }
         for (p, q) in snapshot.asks {
             let price: i32 = dot_trim(p.clone(), PRICE_PRECISION).parse::<i32>().unwrap();
             let qty: i32 = dot_trim(q.clone(), SIZE_PRECISION).parse::<i32>().unwrap();
-            ob.add_level(Side::Ask, price, qty);
+            ob.apply_update("BINANCE", Side::Ask, price, qty);
         }
         ob.print();
     }
@@ -87,12 +87,12 @@ pub fn run(order_book: Arc<Mutex<OrderBook>>) {
                         for (p, q) in update.b {
                             let price: i32 = dot_trim(p.clone(), PRICE_PRECISION).parse::<i32>().unwrap();
                             let qty: i32 = dot_trim(q.clone(), SIZE_PRECISION).parse::<i32>().unwrap();
-                            ob.add_level(Side::Bid, price, qty);
+                            ob.apply_update("BINANCE", Side::Bid, price, qty);
                         }
                         for (p, q) in update.a {
                             let price: i32 = dot_trim(p.clone(), PRICE_PRECISION).parse::<i32>().unwrap();
                             let qty: i32 = dot_trim(q.clone(), SIZE_PRECISION).parse::<i32>().unwrap();
-                            ob.add_level(Side::Ask, price, qty);
+                            ob.apply_update("BINANCE", Side::Ask, price, qty);
                         }
                         last_update_id = update.final_update_id;
                         // ob.print();

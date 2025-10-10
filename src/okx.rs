@@ -67,13 +67,13 @@ pub fn run(order_book: Arc<Mutex<OrderBook>>) {
                         for (p, q, _x, _y) in update.data[0].bids.iter() {
                             let price: i32 = dot_trim(p.clone(), PRICE_PRECISION).parse::<i32>().unwrap();
                             let qty: i32 = dot_trim(q.clone(), SIZE_PRECISION).parse::<i32>().unwrap();
-                            ob.add_level(Side::Bid, price, qty);
+                            ob.apply_update("OKX", Side::Bid, price, qty);
                         }
 
                         for (p, q, _x, _y) in update.data[0].asks.iter() {
                             let price: i32 = dot_trim(p.clone(), PRICE_PRECISION).parse::<i32>().unwrap();
                             let qty: i32 = dot_trim(q.clone(), SIZE_PRECISION).parse::<i32>().unwrap();
-                            ob.add_level(Side::Ask, price, qty);
+                            ob.apply_update("OKX", Side::Ask, price, qty);
                         }
 
                         // ob.print();
