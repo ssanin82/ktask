@@ -6,7 +6,8 @@ use std::pin::Pin;
 use std::time::Duration;
 use ktask::okx::run as run_okx;
 use ktask::binance::run as run_bnc;
-use ktask::order_book::OrderBook;
+use ktask::order_book::{OrderBook, Side, PRICE_PRECISION, SIZE_PRECISION};
+use ktask::helpers::itos;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use anyhow::Result;
@@ -57,28 +58,29 @@ impl Publisher for MyPublisher {
         let ob_clone = Arc::clone(&self.order_book);
         tokio::spawn(async move {
             loop {
-                // sending the message -----------
-                let msg = Message {
-                    topic: "prices".to_string(),
-                    // TODO
-                    spread: "123".to_string(),
-                    bids: vec![
-                        Level { price: "456".to_string(), size: "789".to_string() },
-                        Level { price: "654".to_string(), size: "987".to_string() },
-                    ],
-                    asks: vec![
-                        Level { price: "456".to_string(), size: "789".to_string() },
-                        Level { price: "654".to_string(), size: "987".to_string() },
-                    ],
-                };
-                if tx.send(Ok(msg)).await.is_err() {
-                    println!("Client disconnected from '{}'", topic);
-                    break;
+                {
+                    let ob = ob_clone.lock().await;
+                    let msg = Message {
+                        topic: "prices".to_string(),
+                        spread: itos(ob.get_spread().unwrap().2, PRICE_PRECISION),
+                        bids: ob.top_n(Side::Bid, 10).iter()
+                            .map(|x| Level {
+                                price: itos(x.price, PRICE_PRECISION),
+                                size: itos(x.total, SIZE_PRECISION),
+                            }).collect(),
+                        asks: ob.top_n(Side::Ask, 10).iter().rev()
+                            .map(|x| Level {
+                                price: itos(x.price, PRICE_PRECISION),
+                                size: itos(x.total, SIZE_PRECISION),
+                            }).collect(),
+                    };
+                    if tx.send(Ok(msg)).await.is_err() {
+                        println!("Client disconnected from '{}'", topic);
+                        break;
+                    }
+                    ob.print_detailed();
                 }
                 tokio::time::sleep(Duration::from_secs(PUB_IVAL_SEC)).await;
-                //
-                let ob = ob_clone.lock().await;
-                ob.print_detailed();
             }
         });
 
