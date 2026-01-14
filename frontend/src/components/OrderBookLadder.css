@@ -1,0 +1,169 @@
+.orderbook-ladder {
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 12px;
+  padding: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+}
+
+.orderbook-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.orderbook-header h2 {
+  font-size: 18px;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.orderbook-info {
+  display: flex;
+  gap: 15px;
+  font-size: 14px;
+}
+
+.mid-price {
+  color: #ffd700;
+  font-weight: 600;
+}
+
+.spread {
+  color: #ff9800;
+  font-weight: 600;
+}
+
+.orderbook-loading {
+  text-align: center;
+  padding: 40px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.orderbook-container {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.orderbook-side {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.orderbook-side-header {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 1fr 1fr 1fr;
+  gap: 10px;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.6);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.orderbook-row {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 1fr 1fr 1fr;
+  gap: 10px;
+  padding: 8px 12px;
+  font-size: 13px;
+  position: relative;
+  transition: all 0.2s ease;
+  border-radius: 4px;
+}
+
+.orderbook-row:hover {
+  background: rgba(255, 255, 255, 0.05) !important;
+  transform: translateX(2px);
+}
+
+.orderbook-row.best-level {
+  font-weight: 700;
+  border: 1px solid currentColor;
+}
+
+.ask-row {
+  color: #f44336;
+}
+
+.bid-row {
+  color: #4caf50;
+}
+
+.price {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.ask-price {
+  color: #f44336;
+}
+
+.bid-price {
+  color: #4caf50;
+}
+
+.size,
+.total,
+.exchange {
+  font-variant-numeric: tabular-nums;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.exchange.binance {
+  color: #f0b90b;
+}
+
+.exchange.okx {
+  color: #00d9ff;
+}
+
+.volume-bar {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  height: 100%;
+  opacity: 0.3;
+  z-index: -1;
+  transition: width 0.3s ease;
+}
+
+.ask-bar {
+  background: linear-gradient(to left, #f44336, transparent);
+}
+
+.bid-bar {
+  background: linear-gradient(to left, #4caf50, transparent);
+}
+
+.orderbook-divider {
+  height: 2px;
+  background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.3), transparent);
+  margin: 8px 0;
+  position: relative;
+}
+
+.mid-price-line {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+}
+
+.mid-price-label {
+  background: rgba(0, 0, 0, 0.6);
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #ffd700;
+  border: 1px solid rgba(255, 215, 0, 0.3);
+}
