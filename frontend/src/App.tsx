@@ -37,50 +37,75 @@ function App() {
   const [snapshot, setSnapshot] = useState<OrderBookSnapshot | null>(null)
   const [history, setHistory] = useState<Array<{ time: string; spread: number | null; midPrice: number | null }>>([])
   const [connected, setConnected] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    const ws = new WebSocket('ws://127.0.0.1:50051/ws')
+    let ws: WebSocket | null = null
+    let reconnectTimeout: NodeJS.Timeout | null = null
 
-    ws.onopen = () => {
-      console.log('WebSocket connected')
-      setConnected(true)
-    }
-
-    ws.onmessage = (event) => {
+    const connect = () => {
       try {
-        const data: OrderBookSnapshot = JSON.parse(event.data)
-        setSnapshot(data)
-        
-        // Update history for charts (keep last 100 points)
-        setHistory(prev => {
-          const newHistory = [...prev, {
-            time: new Date(data.timestamp).toLocaleTimeString(),
-            spread: data.spread,
-            midPrice: data.mid_price
-          }]
-          return newHistory.slice(-100)
-        })
+        ws = new WebSocket('ws://127.0.0.1:50051/ws')
+
+        ws.onopen = () => {
+          console.log('WebSocket connected')
+          setConnected(true)
+          setError(null)
+        }
+
+        ws.onmessage = (event) => {
+          try {
+            const data: OrderBookSnapshot = JSON.parse(event.data)
+            setSnapshot(data)
+            
+            // Update history for charts (keep last 100 points)
+            setHistory(prev => {
+              const newHistory = [...prev, {
+                time: new Date(data.timestamp).toLocaleTimeString(),
+                spread: data.spread,
+                midPrice: data.mid_price
+              }]
+              return newHistory.slice(-100)
+            })
+          } catch (error) {
+            console.error('Error parsing WebSocket message:', error)
+            setError('Failed to parse data from server')
+          }
+        }
+
+        ws.onerror = (error) => {
+          console.error('WebSocket error:', error)
+          setConnected(false)
+          setError('WebSocket connection error. Make sure the backend is running on port 50051.')
+        }
+
+        ws.onclose = (event) => {
+          console.log('WebSocket disconnected', event.code, event.reason)
+          setConnected(false)
+          if (event.code !== 1000) {
+            setError('Connection lost. Attempting to reconnect...')
+          }
+          // Attempt to reconnect after 3 seconds
+          reconnectTimeout = setTimeout(() => {
+            connect()
+          }, 3000)
+        }
       } catch (error) {
-        console.error('Error parsing WebSocket message:', error)
+        console.error('Failed to create WebSocket:', error)
+        setError('Failed to connect to backend. Make sure the backend is running on port 50051.')
+        setConnected(false)
       }
     }
 
-    ws.onerror = (error) => {
-      console.error('WebSocket error:', error)
-      setConnected(false)
-    }
-
-    ws.onclose = () => {
-      console.log('WebSocket disconnected')
-      setConnected(false)
-      // Attempt to reconnect after 3 seconds
-      setTimeout(() => {
-        window.location.reload()
-      }, 3000)
-    }
+    connect()
 
     return () => {
-      ws.close()
+      if (reconnectTimeout) {
+        clearTimeout(reconnectTimeout)
+      }
+      if (ws) {
+        ws.close()
+      }
     }
   }, [])
 
@@ -93,6 +118,21 @@ function App() {
           {connected ? 'Connected' : 'Disconnected'}
         </div>
       </header>
+
+      {error && (
+        <div className="error-banner">
+          <strong>Error:</strong> {error}
+        </div>
+      )}
+
+      {!connected && !snapshot && (
+        <div className="loading-message">
+          <p>Connecting to backend...</p>
+          <p style={{ fontSize: '14px', color: 'rgba(255, 255, 255, 0.6)', marginTop: '10px' }}>
+            Make sure the backend is running: <code>cargo run --bin pricer</code>
+          </p>
+        </div>
+      )}
 
       <div className="dashboard-grid">
         <div className="metrics-panel">
