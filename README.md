@@ -88,7 +88,7 @@ cd frontend
 pnpm install
 ```
 
-3. Start the development server (with Turbopack for faster builds):
+3. Start the development server:
 ```bash
 pnpm run dev
 ```
