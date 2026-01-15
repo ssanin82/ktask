@@ -53,15 +53,6 @@ sudo apt-get update
 sudo apt-get install -y protobuf-compiler
 ```
 
-On macOS:
-```bash
-brew install protobuf
-```
-
-On Windows:
-- Download from https://github.com/protocolbuffers/protobuf/releases
-- Or use Chocolatey: `choco install protoc`
-
 Verify installation:
 ```bash
 protoc --version
