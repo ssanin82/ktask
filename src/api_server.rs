@@ -68,7 +68,7 @@ async fn handle_socket(socket: axum::extract::ws::WebSocket, state: AppState) {
     // Send initial snapshot (even if empty)
     {
         let ob = state.order_book.lock().await;
-        let snapshot = ob.create_snapshot(5);
+        let snapshot = ob.create_snapshot(50);
         match serde_json::to_string(&snapshot) {
             Ok(json) => {
                 println!("[API] Sending initial snapshot to WebSocket client ({} bytes)", json.len());
@@ -158,13 +158,13 @@ async fn handle_socket(socket: axum::extract::ws::WebSocket, state: AppState) {
 
 async fn get_snapshot(State(state): State<AppState>) -> impl IntoResponse {
     let ob = state.order_book.lock().await;
-    let snapshot = ob.create_snapshot(5);
+    let snapshot = ob.create_snapshot(50);
     axum::Json(snapshot)
 }
 
 async fn get_metrics(State(state): State<AppState>) -> impl IntoResponse {
     let ob = state.order_book.lock().await;
-    let snapshot = ob.create_snapshot(5);
+    let snapshot = ob.create_snapshot(50);
     
     let metrics = json!({
         "timestamp": snapshot.timestamp,

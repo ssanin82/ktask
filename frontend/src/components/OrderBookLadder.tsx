@@ -22,7 +22,11 @@ const OrderBookLadder: React.FC<OrderBookLadderProps> = ({ snapshot }) => {
       return { bids: [], asks: [], maxVolume: 0 }
     }
 
-    const processedBids = snapshot.bids.map(b => ({
+    // Only show top 5 levels per side
+    const topBids = snapshot.bids.slice(0, 5)
+    const topAsks = snapshot.asks.slice(0, 5)
+
+    const processedBids = topBids.map(b => ({
       ...b,
       priceFloat: b.price / 100000.0,
       sizeFloat: b.total / 1000000.0,
@@ -30,7 +34,7 @@ const OrderBookLadder: React.FC<OrderBookLadderProps> = ({ snapshot }) => {
       okxSize: (b.by_source['OKX'] || 0) / 1000000.0,
     }))
 
-    const processedAsks = snapshot.asks.map(a => ({
+    const processedAsks = topAsks.map(a => ({
       ...a,
       priceFloat: a.price / 100000.0,
       sizeFloat: a.total / 1000000.0,
