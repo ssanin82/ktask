@@ -117,8 +117,8 @@ async fn get_metrics(State(state): State<AppState>) -> impl IntoResponse {
 }
 
 async fn health_check() -> impl IntoResponse {
-    json!({
+    axum::Json(json!({
         "status": "ok",
         "timestamp": Utc::now()
-    })
+    }))
 }

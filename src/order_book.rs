@@ -242,7 +242,7 @@ impl OrderBook {
     pub fn create_snapshot(&self, depth: usize) -> OrderBookSnapshot {
         let timestamp = Utc::now();
         let spread_info = self.get_spread();
-        let (best_bid, best_ask, spread) = spread_info.unwrap_or((0, 0, 0));
+        let (_best_bid, _best_ask, _spread) = spread_info.unwrap_or((0, 0, 0));
         let mid_price = spread_info.map(|(b, a, _)| (b + a) / 2);
 
         let bids = self.top_n(Side::Bid, depth);
