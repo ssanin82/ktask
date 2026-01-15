@@ -40,76 +40,46 @@ function App() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    let ws: WebSocket | null = null
-    let reconnectTimeout: NodeJS.Timeout | null = null
+    let pollInterval: NodeJS.Timeout | null = null
+    let isPolling = true
 
-    const connect = () => {
+    const pollSnapshot = async () => {
+      if (!isPolling) return
+
       try {
-        // Use Vite proxy for WebSocket to avoid browser blocking issues
-        // The proxy is configured in vite.config.ts to forward /ws to the backend
-        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsUrl = `${protocol}//${window.location.host}/ws`;
-        console.log('[APP] Connecting to WebSocket via Vite proxy:', wsUrl);
-        ws = new WebSocket(wsUrl)
-
-        ws.onopen = () => {
-          console.log('WebSocket connected')
-          setConnected(true)
-          setError(null)
+        const response = await fetch('/api/snapshot')
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`)
         }
-
-        ws.onmessage = (event) => {
-          try {
-            const data: OrderBookSnapshot = JSON.parse(event.data)
-            setSnapshot(data)
-            
-            // Update history for charts (keep last 100 points)
-            setHistory(prev => {
-              const newHistory = [...prev, {
-                time: new Date(data.timestamp).toLocaleTimeString(),
-                spread: data.spread,
-                midPrice: data.mid_price
-              }]
-              return newHistory.slice(-100)
-            })
-          } catch (error) {
-            console.error('Error parsing WebSocket message:', error)
-            setError('Failed to parse data from server')
-          }
-        }
-
-        ws.onerror = (error) => {
-          console.error('WebSocket error:', error)
-          setConnected(false)
-          setError('WebSocket connection error. Make sure the backend is running on port 50051.')
-        }
-
-        ws.onclose = (event) => {
-          console.log('WebSocket disconnected', event.code, event.reason)
-          setConnected(false)
-          if (event.code !== 1000) {
-            setError('Connection lost. Attempting to reconnect...')
-          }
-          // Attempt to reconnect after 3 seconds
-          reconnectTimeout = setTimeout(() => {
-            connect()
-          }, 3000)
-        }
+        const data: OrderBookSnapshot = await response.json()
+        setSnapshot(data)
+        setConnected(true)
+        setError(null)
+        
+        // Update history for charts (keep last 100 points)
+        setHistory(prev => {
+          const newHistory = [...prev, {
+            time: new Date(data.timestamp).toLocaleTimeString(),
+            spread: data.spread,
+            midPrice: data.mid_price
+          }]
+          return newHistory.slice(-100)
+        })
       } catch (error) {
-        console.error('Failed to create WebSocket:', error)
-        setError('Failed to connect to backend. Make sure the backend is running on port 50051.')
+        console.error('Error fetching snapshot:', error)
         setConnected(false)
+        setError('Failed to connect to backend. Make sure the backend is running on port 50051.')
       }
     }
 
-    connect()
+    // Poll immediately, then every 100ms (10 times per second)
+    pollSnapshot()
+    pollInterval = setInterval(pollSnapshot, 100)
 
     return () => {
-      if (reconnectTimeout) {
-        clearTimeout(reconnectTimeout)
-      }
-      if (ws) {
-        ws.close()
+      isPolling = false
+      if (pollInterval) {
+        clearInterval(pollInterval)
       }
     }
   }, [])
