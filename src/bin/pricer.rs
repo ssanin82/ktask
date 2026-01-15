@@ -127,6 +127,25 @@ async fn main() -> Result<()> {
         }
     });
 
+    // Start periodic logging task for best bid/ask
+    let ob_log = Arc::clone(&ob);
+    tokio::spawn(async move {
+        let mut interval = tokio::time::interval(Duration::from_secs(5));
+        loop {
+            interval.tick().await;
+            let ob = ob_log.lock().await;
+            if let Some((best_bid, best_ask, spread)) = ob.get_spread() {
+                let best_bid_float = best_bid as f64 / 100000.0;
+                let best_ask_float = best_ask as f64 / 100000.0;
+                let spread_float = spread as f64 / 100000.0;
+                println!("[ORDER BOOK] Best Bid: {:.5}, Best Ask: {:.5}, Spread: {:.5}", 
+                    best_bid_float, best_ask_float, spread_float);
+            } else {
+                println!("[ORDER BOOK] No spread available (missing bids or asks)");
+            }
+        }
+    });
+
     // Keep gRPC server for backward compatibility (moved to 50052 to free 50051 for API server)
     let addr = "127.0.0.1:50052".parse().unwrap();
     let publisher = MyPublisher::new(Arc::clone(&ob));
