@@ -8,7 +8,7 @@ pub mod pubsub {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let mut client = PublisherClient::connect("http://127.0.0.1:50051").await?;
+    let mut client = PublisherClient::connect("http://127.0.0.1:50052").await?;
     println!("Connected to gRPC publisher.");
 
     let request = Request::new(SubscribeRequest {
