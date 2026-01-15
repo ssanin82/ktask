@@ -17,6 +17,9 @@ export default defineConfig({
       '/ws': {
         target: 'ws://127.0.0.1:50051',
         ws: true,
+        changeOrigin: true,
+        secure: false,
+        rewrite: (path) => path, // Don't rewrite the path
       },
     },
   },

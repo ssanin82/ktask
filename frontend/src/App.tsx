@@ -45,12 +45,11 @@ function App() {
 
     const connect = () => {
       try {
-        // Use window.location.hostname to work with both localhost and remote access
-        const wsHost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
-          ? '127.0.0.1' 
-          : window.location.hostname;
-        const wsUrl = `ws://${wsHost}:50051/ws`;
-        console.log('[APP] Connecting to WebSocket:', wsUrl);
+        // Use Vite proxy for WebSocket to avoid browser blocking issues
+        // The proxy is configured in vite.config.ts to forward /ws to the backend
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${protocol}//${window.location.host}/ws`;
+        console.log('[APP] Connecting to WebSocket via Vite proxy:', wsUrl);
         ws = new WebSocket(wsUrl)
 
         ws.onopen = () => {
