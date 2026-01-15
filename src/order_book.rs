@@ -209,28 +209,29 @@ impl OrderBook {
     fn calculate_depth(&self, side: Side, bps: i32) -> Option<i32> {
         let spread_info = self.get_spread()?;
         let (best_bid, best_ask, _spread) = spread_info;
-        let mid_price = (best_bid + best_ask) / 2;
+        let mid_price = ((best_bid as i64 + best_ask as i64) / 2) as i32;
         
         let price_offset = (mid_price as f64 * bps as f64 / 10000.0) as i32;
         let target_price = match side {
-            Side::Bid => best_bid - price_offset,
-            Side::Ask => best_ask + price_offset,
+            Side::Bid => best_bid.saturating_sub(price_offset),
+            Side::Ask => best_ask.saturating_add(price_offset),
         };
 
         let snapshots = self.top_n(side, 1000);
-        let mut total = 0;
+        let mut total: i64 = 0;
         for snapshot in snapshots {
             let include = match side {
                 Side::Bid => snapshot.price >= target_price,
                 Side::Ask => snapshot.price <= target_price,
             };
             if include {
-                total += snapshot.total;
+                total = total.saturating_add(snapshot.total as i64);
             } else {
                 break;
             }
         }
-        Some(total)
+        // Clamp to i32::MAX to avoid overflow
+        Some(total.min(i32::MAX as i64) as i32)
     }
 
     /// Get total volume for top N levels
