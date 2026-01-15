@@ -259,10 +259,15 @@ impl OrderBook {
         let depth_bid_10bps = self.calculate_depth(Side::Bid, 10).unwrap_or(0);
         let depth_ask_10bps = self.calculate_depth(Side::Ask, 10).unwrap_or(0);
         
-        let imbalance = if total_bid_volume + total_ask_volume > 0 {
-            Some(total_bid_volume as f64 / (total_bid_volume + total_ask_volume) as f64)
-        } else {
-            None
+        let imbalance = {
+            let total_bid = total_bid_volume as i64;
+            let total_ask = total_ask_volume as i64;
+            let total = total_bid + total_ask;
+            if total > 0 {
+                Some(total_bid as f64 / total as f64)
+            } else {
+                None
+            }
         };
 
         OrderBookSnapshot {
