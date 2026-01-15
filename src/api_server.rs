@@ -65,31 +65,54 @@ async fn handle_socket(socket: axum::extract::ws::WebSocket, state: AppState) {
     let (mut sender, mut receiver) = socket.split();
     let mut rx = state.tx.subscribe();
     
-    // Send initial snapshot
+    // Send initial snapshot (even if empty)
     {
         let ob = state.order_book.lock().await;
         let snapshot = ob.create_snapshot(50);
-        if let Ok(json) = serde_json::to_string(&snapshot) {
-            println!("[API] Sending initial snapshot to WebSocket client");
-            if let Err(e) = sender.send(Message::Text(json)).await {
-                println!("[API] Error sending initial snapshot: {}", e);
-                return;
+        match serde_json::to_string(&snapshot) {
+            Ok(json) => {
+                println!("[API] Sending initial snapshot to WebSocket client ({} bytes)", json.len());
+                match sender.send(Message::Text(json)).await {
+                    Ok(_) => println!("[API] Initial snapshot sent successfully"),
+                    Err(e) => {
+                        println!("[API] Error sending initial snapshot: {}", e);
+                        // Don't return, keep connection open for future messages
+                    }
+                }
             }
-        } else {
-            println!("[API] Error serializing initial snapshot");
+            Err(e) => {
+                println!("[API] Error serializing initial snapshot: {}", e);
+                // Send error message to client
+                let _ = sender.send(Message::Text(format!(r#"{{"error": "Failed to serialize snapshot: {}"}}"#, e))).await;
+            }
         }
     }
     
     let mut send_task = tokio::spawn(async move {
         let mut message_count = 0;
-        while let Ok(msg) = rx.recv().await {
-            message_count += 1;
-            if message_count % 100 == 0 {
-                println!("[API] Sent {} messages to WebSocket client", message_count);
-            }
-            if sender.send(Message::Text(msg)).await.is_err() {
-                println!("[API] Error sending message to WebSocket client, connection closed");
-                break;
+        loop {
+            match rx.recv().await {
+                Ok(msg) => {
+                    message_count += 1;
+                    if message_count % 100 == 0 {
+                        println!("[API] Sent {} messages to WebSocket client", message_count);
+                    }
+                    match sender.send(Message::Text(msg)).await {
+                        Ok(_) => {}
+                        Err(e) => {
+                            println!("[API] Error sending message to WebSocket client: {}, connection closed", e);
+                            break;
+                        }
+                    }
+                }
+                Err(broadcast::error::RecvError::Closed) => {
+                    println!("[API] Broadcast channel closed, ending send task");
+                    break;
+                }
+                Err(broadcast::error::RecvError::Lagged(skipped)) => {
+                    println!("[API] Broadcast channel lagged, skipped {} messages", skipped);
+                    // Continue receiving
+                }
             }
         }
         println!("[API] WebSocket send task ended");
