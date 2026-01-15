@@ -49,9 +49,9 @@ cargo run --bin pricer
 The publisher will:
 - Connect to Binance and OKX WebSocket streams
 - Aggregate order book data
-- Serve gRPC on `127.0.0.1:50051` (for backward compatibility)
-- Serve WebSocket on `ws://127.0.0.1:3001/ws`
-- Serve REST API on `http://127.0.0.1:3001/api/*`
+- Serve gRPC on `127.0.0.1:50052` (for backward compatibility)
+- Serve WebSocket on `ws://127.0.0.1:50051/ws`
+- Serve REST API on `http://127.0.0.1:50051/api/*`
 
 ### Frontend (React)
 
@@ -62,12 +62,12 @@ cd frontend
 
 2. Install dependencies (if not already installed):
 ```bash
-npm install
+pnpm install
 ```
 
-3. Start the development server:
+3. Start the development server (with Turbopack for faster builds):
 ```bash
-npm run dev
+pnpm run dev
 ```
 
 The frontend will be available at `http://localhost:3000` and will automatically connect to the backend WebSocket server.

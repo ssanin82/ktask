@@ -14,25 +14,25 @@ A professional HFT-style order book visualization dashboard built with React and
 
 1. Install dependencies:
 ```bash
-npm install
+pnpm install
 ```
 
-2. Start the development server:
+2. Start the development server (with Turbopack):
 ```bash
-npm run dev
+pnpm run dev
 ```
 
 The frontend will be available at `http://localhost:3000`
 
 ## Prerequisites
 
-- Node.js and npm installed
-- The Rust backend server must be running on `http://127.0.0.1:3001`
+- Node.js and pnpm installed
+- The Rust backend server must be running on `http://127.0.0.1:50051`
 
 ## Build for Production
 
 ```bash
-npm run build
+pnpm run build
 ```
 
 The built files will be in the `dist` directory.
