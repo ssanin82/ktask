@@ -27,13 +27,15 @@ pub async fn run_api_server(
             tx,
         });
 
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:50051").await?;
-    println!("[API] HTTP/REST server listening on http://127.0.0.1:50051");
-    println!("[API] WebSocket endpoint: ws://127.0.0.1:50051/ws");
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:50051").await?;
+    println!("[API] ========================================");
+    println!("[API] HTTP/REST server listening on http://0.0.0.0:50051");
+    println!("[API] WebSocket endpoint: ws://0.0.0.0:50051/ws");
     println!("[API] REST endpoints:");
     println!("[API]   - GET /api/snapshot - Full order book snapshot");
     println!("[API]   - GET /api/metrics - Analytics metrics");
     println!("[API]   - GET /api/health - Health check");
+    println!("[API] ========================================");
     axum::serve(listener, app).await?;
     Ok(())
 }

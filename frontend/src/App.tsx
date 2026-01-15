@@ -45,7 +45,13 @@ function App() {
 
     const connect = () => {
       try {
-        ws = new WebSocket('ws://127.0.0.1:50051/ws')
+        // Use window.location.hostname to work with both localhost and remote access
+        const wsHost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+          ? '127.0.0.1' 
+          : window.location.hostname;
+        const wsUrl = `ws://${wsHost}:50051/ws`;
+        console.log('[APP] Connecting to WebSocket:', wsUrl);
+        ws = new WebSocket(wsUrl)
 
         ws.onopen = () => {
           console.log('WebSocket connected')
