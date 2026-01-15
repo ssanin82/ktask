@@ -106,8 +106,12 @@ async fn main() -> Result<()> {
     let ob_api = Arc::clone(&ob);
     let tx_api = tx.clone();
     tokio::spawn(async move {
+        println!("[PRICER] Starting API server...");
         if let Err(e) = run_api_server(ob_api, tx_api).await {
-            eprintln!("API server error: {}", e);
+            eprintln!("[PRICER] API server error: {}", e);
+            eprintln!("[PRICER] API server crashed! Restarting in 5 seconds...");
+            tokio::time::sleep(Duration::from_secs(5)).await;
+            // Could add retry logic here if needed
         }
     });
 

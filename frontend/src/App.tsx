@@ -47,7 +47,18 @@ function App() {
       if (!isPolling) return
 
       try {
-        const response = await fetch('/api/snapshot')
+        const controller = new AbortController()
+        const timeoutId = setTimeout(() => controller.abort(), 5000) // 5 second timeout
+        
+        const response = await fetch('/api/snapshot', {
+          signal: controller.signal,
+          headers: {
+            'Accept': 'application/json',
+          },
+        })
+        
+        clearTimeout(timeoutId)
+        
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`)
         }
@@ -65,10 +76,18 @@ function App() {
           }]
           return newHistory.slice(-100)
         })
-      } catch (error) {
-        console.error('Error fetching snapshot:', error)
+      } catch (error: any) {
+        if (error.name === 'AbortError') {
+          console.error('Request timeout - backend may not be running')
+          setError('Request timeout. Backend may not be running on port 50051.')
+        } else if (error.message?.includes('Failed to fetch') || error.message?.includes('socket hang up')) {
+          console.error('Connection failed - backend not reachable')
+          setError('Cannot connect to backend. Make sure "cargo run --bin pricer" is running.')
+        } else {
+          console.error('Error fetching snapshot:', error)
+          setError(`Error: ${error.message || 'Unknown error'}`)
+        }
         setConnected(false)
-        setError('Failed to connect to backend. Make sure the backend is running on port 50051.')
       }
     }
 
