@@ -1,6 +1,7 @@
 
 
 # Order Book Aggregator with HFT Visualization
+![Screenshot](Screenshot-ktask.png)
 
 A high-performance order book aggregator written in Rust that consolidates ETH/BTC order book data from multiple exchanges (Binance and OKX) and provides a professional HFT-style web dashboard for visualization.
 
