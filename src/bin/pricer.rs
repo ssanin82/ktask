@@ -123,7 +123,7 @@ async fn main() -> Result<()> {
             tokio::time::sleep(Duration::from_millis(100)).await; // 10 updates per second
             let snapshot = {
                 let ob = ob_pub.lock().await;
-                ob.create_snapshot(50)
+                ob.create_snapshot(5)
             };
             if let Ok(json) = serde_json::to_string(&snapshot) {
                 let _ = tx_pub.send(json);

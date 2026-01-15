@@ -64,14 +64,14 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({ snapshot }) => {
         </div>
 
         <div className="metric-card">
-          <div className="metric-label">Bid Volume (Top 50)</div>
+          <div className="metric-label">Bid Volume (Top 5)</div>
           <div className="metric-value">
             {formatNumber(snapshot.total_bid_volume / 1000000.0, 2)}
           </div>
         </div>
 
         <div className="metric-card">
-          <div className="metric-label">Ask Volume (Top 50)</div>
+          <div className="metric-label">Ask Volume (Top 5)</div>
           <div className="metric-value">
             {formatNumber(snapshot.total_ask_volume / 1000000.0, 2)}
           </div>
