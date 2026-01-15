@@ -20,9 +20,12 @@ tonic = "0.12"
 tokio = { version = "1.41", features = ["full"] }
 tokio-stream = "0.1"
 futures-core = "0.3"
-chrono = "0.4"
+chrono = { version = "0.4", features = ["serde"] }
 futures-util = "0.3"
 anyhow = "1.0"
+axum = { version = "0.7", features = ["ws", "cors"] }
+tower = "0.4"
+tower-http = { version = "0.5", features = ["cors"] }
 
 [build-dependencies]
 tonic-build = "0.12"

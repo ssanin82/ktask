@@ -39,7 +39,7 @@ function App() {
   const [connected, setConnected] = useState(false)
 
   useEffect(() => {
-    const ws = new WebSocket('ws://127.0.0.1:3001/ws')
+    const ws = new WebSocket('ws://127.0.0.1:50051/ws')
 
     ws.onopen = () => {
       console.log('WebSocket connected')

@@ -1,5 +1,6 @@
 use std::collections::{BTreeMap, HashMap};
-use chrono::Utc;
+use chrono::{Utc, DateTime};
+use serde::{Serialize, Deserialize};
 
 pub const PRICE_PRECISION: usize = 5;
 pub const SIZE_PRECISION: usize = 6;
@@ -31,11 +32,32 @@ pub struct OrderBook {
     upd_count: HashMap<String, i32>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PriceLevelSnapshot {
     pub price: i32,
     pub total: i32,
     pub by_source: HashMap<String, i32>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OrderBookSnapshot {
+    pub timestamp: DateTime<Utc>,
+    pub spread: Option<i32>,
+    pub best_bid: Option<i32>,
+    pub best_ask: Option<i32>,
+    pub mid_price: Option<i32>,
+    pub bids: Vec<PriceLevelSnapshot>,
+    pub asks: Vec<PriceLevelSnapshot>,
+    pub total_bid_volume: i32,
+    pub total_ask_volume: i32,
+    pub update_counts: HashMap<String, i32>,
+    pub vwap_bid: Option<f64>,
+    pub vwap_ask: Option<f64>,
+    pub depth_bid_5bps: i32,
+    pub depth_ask_5bps: i32,
+    pub depth_bid_10bps: i32,
+    pub depth_ask_10bps: i32,
+    pub imbalance: Option<f64>,
 }
 
 impl OrderBook {
@@ -167,6 +189,101 @@ impl OrderBook {
             self.upd_count.get(&String::from("BINANCE")).unwrap_or(&0),
             self.upd_count.get(&String::from("OKX")).unwrap_or(&0)
         );
+    }
+
+    /// Calculate VWAP for bids or asks
+    fn calculate_vwap(&self, side: Side, levels: usize) -> Option<f64> {
+        let snapshots = self.top_n(side, levels);
+        if snapshots.is_empty() {
+            return None;
+        }
+        let total_value: i64 = snapshots.iter().map(|s| s.price as i64 * s.total as i64).sum();
+        let total_volume: i64 = snapshots.iter().map(|s| s.total as i64).sum();
+        if total_volume == 0 {
+            return None;
+        }
+        Some(total_value as f64 / total_volume as f64)
+    }
+
+    /// Calculate cumulative volume within basis points from mid price
+    fn calculate_depth(&self, side: Side, bps: i32) -> Option<i32> {
+        let spread_info = self.get_spread()?;
+        let (best_bid, best_ask, _spread) = spread_info;
+        let mid_price = (best_bid + best_ask) / 2;
+        
+        let price_offset = (mid_price as f64 * bps as f64 / 10000.0) as i32;
+        let target_price = match side {
+            Side::Bid => best_bid - price_offset,
+            Side::Ask => best_ask + price_offset,
+        };
+
+        let snapshots = self.top_n(side, 1000);
+        let mut total = 0;
+        for snapshot in snapshots {
+            let include = match side {
+                Side::Bid => snapshot.price >= target_price,
+                Side::Ask => snapshot.price <= target_price,
+            };
+            if include {
+                total += snapshot.total;
+            } else {
+                break;
+            }
+        }
+        Some(total)
+    }
+
+    /// Get total volume for top N levels
+    fn total_volume(&self, side: Side, n: usize) -> i32 {
+        self.top_n(side, n).iter().map(|s| s.total).sum()
+    }
+
+    /// Create a comprehensive snapshot for API/WebSocket
+    pub fn create_snapshot(&self, depth: usize) -> OrderBookSnapshot {
+        let timestamp = Utc::now();
+        let spread_info = self.get_spread();
+        let (best_bid, best_ask, spread) = spread_info.unwrap_or((0, 0, 0));
+        let mid_price = spread_info.map(|(b, a, _)| (b + a) / 2);
+
+        let bids = self.top_n(Side::Bid, depth);
+        let asks = self.top_n(Side::Ask, depth);
+        
+        let total_bid_volume = self.total_volume(Side::Bid, depth);
+        let total_ask_volume = self.total_volume(Side::Ask, depth);
+        
+        let vwap_bid = self.calculate_vwap(Side::Bid, depth);
+        let vwap_ask = self.calculate_vwap(Side::Ask, depth);
+        
+        let depth_bid_5bps = self.calculate_depth(Side::Bid, 5).unwrap_or(0);
+        let depth_ask_5bps = self.calculate_depth(Side::Ask, 5).unwrap_or(0);
+        let depth_bid_10bps = self.calculate_depth(Side::Bid, 10).unwrap_or(0);
+        let depth_ask_10bps = self.calculate_depth(Side::Ask, 10).unwrap_or(0);
+        
+        let imbalance = if total_bid_volume + total_ask_volume > 0 {
+            Some(total_bid_volume as f64 / (total_bid_volume + total_ask_volume) as f64)
+        } else {
+            None
+        };
+
+        OrderBookSnapshot {
+            timestamp,
+            spread: spread_info.map(|(_, _, s)| s),
+            best_bid: spread_info.map(|(b, _, _)| b),
+            best_ask: spread_info.map(|(_, a, _)| a),
+            mid_price,
+            bids,
+            asks,
+            total_bid_volume,
+            total_ask_volume,
+            update_counts: self.upd_count.clone(),
+            vwap_bid,
+            vwap_ask,
+            depth_bid_5bps,
+            depth_ask_5bps,
+            depth_bid_10bps,
+            depth_ask_10bps,
+            imbalance,
+        }
     }
 }
 
