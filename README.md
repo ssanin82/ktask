@@ -39,6 +39,38 @@ The chosen price/size precision is the maximum of the corresponding precisions o
 
 ## Running the System
 
+### Prerequisites
+
+**Backend Dependencies:**
+- Rust toolchain (install from https://rustup.rs/)
+- Protocol Buffer Compiler (`protoc`)
+
+**Installing protoc:**
+
+On Ubuntu/Debian:
+```bash
+sudo apt-get update
+sudo apt-get install -y protobuf-compiler
+```
+
+On macOS:
+```bash
+brew install protobuf
+```
+
+On Windows:
+- Download from https://github.com/protocolbuffers/protobuf/releases
+- Or use Chocolatey: `choco install protoc`
+
+Verify installation:
+```bash
+protoc --version
+```
+
+**Frontend Dependencies:**
+- Node.js (v18 or higher)
+- pnpm (install with `npm install -g pnpm`)
+
 ### Backend (Rust)
 
 Start the publisher which aggregates order book data and serves it via gRPC, WebSocket, and REST API:
